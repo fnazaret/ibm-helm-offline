@@ -1,0 +1,91 @@
+# Licensed Materials - Property of IBM
+# 5737-E67
+# @ Copyright IBM Corporation 2016, 2018. All Rights Reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
+prometheus:
+  image:
+    name: mycluster.icp:8500/default/ibmcom/prometheus
+    tag: v2.0.0
+  port: 80
+  args:
+    retention: 24h
+  persistentVolume:
+    enabled: false
+    size: 10Gi
+    storageClass: "-"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  alertRuleFiles: alertRules
+  configFiles: prometheusConfig
+  ## if true, will create rbac role and related rolebinding for k8s resource access
+  ##
+  rbacRoleCreation: true
+
+alertmanager:
+  image:
+    name: mycluster.icp:8500/default/ibmcom/alertmanager
+    tag: v0.13.0
+  port: 80
+  persistentVolume:
+    enabled: false
+    size: 1Gi
+    storageClass: "-"
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+  configFiles: alermanagerConfig
+
+kubeStateMetrics:
+  image:
+    name: mycluster.icp:8500/default/ibmcom/kube-state-metrics
+    tag: v1.2.0
+  port: 80
+
+nodeExporter:
+  image:
+    name: mycluster.icp:8500/default/ibmcom/node-exporter
+    tag: v0.15.2
+  port: 9100
+
+grafana:
+  image:
+    name: "mycluster.icp:8500/default/ibmcom/grafana"
+    tag: "4.6.3"
+  port: 3000
+  user: "admin"
+  password: "admin"
+  persistentVolume:
+    enabled: false
+    size: 1Gi
+    storageClass: "-"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  configFiles: grafanaConfig
+
+collectdExporter:
+  image:
+    name: mycluster.icp:8500/default/ibmcom/collectd-exporter
+    tag: 0.3.1
+  service:
+    serviceMetricsPort: 9103
+    serviceCollectorPort: 25826
+
+configmapReload:
+  image:
+    name: mycluster.icp:8500/default/ibmcom/configmap-reload
+    tag: v0.1

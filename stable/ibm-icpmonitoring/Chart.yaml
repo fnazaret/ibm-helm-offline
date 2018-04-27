@@ -1,0 +1,17 @@
+# Licensed Materials - Property of IBM
+# 5737-E67
+# @ Copyright IBM Corporation 2016, 2018. All Rights Reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
+name: ibm-icpmonitoring
+version: 1.0.0
+tillerVersion: ">=2.5.0"
+description: IBM monitoring service in private cloud
+sources:
+  - https://github.com/prometheus/prometheus
+  - https://github.com/prometheus/alertmanager
+  - https://github.com/prometheus/node_exporter
+  - https://github.com/kubernetes/kube-state-metrics
+  - https://github.com/grafana/grafana
+  - https://github.com/prometheus/collectd_exporter
+engine: gotpl

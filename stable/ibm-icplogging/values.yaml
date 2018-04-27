@@ -1,0 +1,105 @@
+image:
+  pullPolicy: IfNotPresent
+
+logstash:
+  replicas: 1
+  name: logstash
+  heapSize: "256m"
+  memoryLimit: "512M"
+  port: 5000
+  image:
+    repository: "mycluster.icp:8500/default/ibmcom/logstash"
+    tag: "5.5.1"
+  probe:
+    enabled: false
+    periodSeconds: 60
+    minEventsPerPeriod: 1
+    maxUnavailablePeriod: 5
+    image:
+      repository: "mycluster.icp:8500/default/ibmcom/logstash-liveness-probe"
+      tag: "0.1.8"
+
+kibana:
+  replicas: 1
+  name: kibana
+  internal: 5601
+  external: 31601
+  image:
+    repository: mycluster.icp:8500/default/ibmcom/kibana
+    tag: 5.5.1
+
+filebeat:
+  name: filebeat-ds
+  image:
+    repository: "mycluster.icp:8500/default/ibmcom/filebeat"
+    tag: 5.5.1
+  scope:
+    nodes:
+    namespaces:
+
+elasticsearch:
+  name: "elasticsearch"
+  internalPort: 9300
+  image:
+    repository: "mycluster.icp:8500/default/ibmcom/elasticsearch"
+    tag: "5.5.1"
+  initImage:
+    repository: "mycluster.icp:8500/default/ibmcom/icp-initcontainer"
+    tag: "1.0.0"
+
+  client:
+    name: client
+    replicas: 1
+    serviceType: ClusterIP
+    heapSize: "256m"
+    memoryLimit: "512M"
+    restPort: 9200
+    antiAffinity: soft
+
+  master:
+    name: master
+    replicas: 1
+    heapSize: "256m"
+    memoryLimit: "512M"
+    antiAffinity: soft
+
+  data:
+    name: data
+    replicas: 2
+    heapSize: "512m"
+    memoryLimit: "1024M"
+    antiAffinity: hard
+    storage:
+      size: 10Gi
+      accessModes:
+        - ReadWriteOnce
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName is set to "", which disables dynamic provisioning
+      ## If set to null, storageClassName is not included
+      storageClass: "manual"
+
+curator:
+  name: log-curator
+  image:
+    repository: "mycluster.icp:8500/default/ibmcom/indices-cleaner"
+    tag: 0.2
+    
+  # runs at 23:59 daily
+  schedule: "59 23 * * *"
+  app:
+    unit: days
+    count: 1
+  monitoring:
+    unit: days
+    count: 1
+  watcher:
+    unit: days
+    count: 1
+
+xpack:
+  monitoring: false
+  security: false
+  graph: false
+  reporting: false
+  ml: false
+  watcher: false

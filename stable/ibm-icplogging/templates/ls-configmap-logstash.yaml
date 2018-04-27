@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "logstash.fullname" . }}-config
+  labels:
+    app: {{ template "logstash.fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    component: "{{ .Values.logstash.name }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  logstash.yml: |-
+    config.reload.automatic: true
+    http.host: "0.0.0.0"
+    path.config: /usr/share/logstash/pipeline
+    xpack.monitoring.enabled: {{ .Values.xpack.monitoring }}
+    xpack.monitoring.elasticsearch.url: "{{ .Values.elasticsearch.name }}:{{ .Values.elasticsearch.client.restPort }}"
+  k8s.conf: |-
+    input {
+      beats {
+        port => {{ .Values.logstash.port }}
+      }
+    }
+
+    filter {
+      if [type] == "kube-logs" {
+        mutate {
+          rename => { "message" => "log" }
+          remove_field => ["host"]
+        }
+
+        date {
+          match => ["time", "ISO8601"]
+        }
+
+        # Sample:
+        # tiller-1279707952-sgd08_kube-system_tiller-0c51282d195d1c21307f6a48b9118d690441cda498fc5a2790c043407eab235b.log
+        # filebeat-j357d_default_filebeat-1a3113e374ad7937a3efa36c4bb42b46b976bcd7cd96223e6b9e6e3df08d802a.log
+        # appstdoutpod_default_app-stdout-container-01c2e7a7b105d9141825ea3ae5634b580fdd20a5a4ee890cdbe0816ca002623c.log
+        # unified-router-4047118581-sm913_kube-system_unified-router-ddda8a8cbcb74c45b64a4b18997b4f2928c998a37e45037cd0304eaa56d1634f.log
+        dissect {
+          mapping => {
+            "source" => "/var/log/containers/%{kubernetes.pod}_%{kubernetes.namespace}_%{container_file_ext}"
+          }
+        }
+
+        dissect {
+          mapping => {
+            "container_file_ext" => "%{container}.%{?file_ext}"
+          }
+          remove_field => ["host", "container_file_ext"]
+        }
+
+        grok {
+          "match" => {
+            "container" => "^%{DATA:kubernetes.container_name}-(?<kubernetes.container_id>[0-9A-Za-z]{64,64})"
+          }
+          remove_field => ["container"]
+        }
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => "{{ .Values.elasticsearch.name }}:{{ .Values.elasticsearch.client.restPort }}"
+        index => "%{[@metadata][beat]}-%{+YYYY.MM.dd}"
+        document_type => "%{[@metadata][type]}"
+      }
+    }
+{{ if .Values.logstash.probe.enabled }}
+  app.json: |-
+    {
+      "logstashPoller": {
+        "periodSeconds": {{ .Values.logstash.probe.periodSeconds }},
+        "minEventsPerPeriod": {{ .Values.logstash.probe.minEventsPerPeriod }},
+        "maxUnavailablePeriod": {{ .Values.logstash.probe.maxUnavailablePeriod }},
+        "logstash": {
+          "name": "{{ .Values.logstash.name }}",
+          "host": "127.0.0.1",
+          "port": 9600
+        }
+      },
+      "server": {
+        "port": 9601,
+        "pretty": true
+      }
+    }
+{{ end }}

@@ -1,0 +1,70 @@
+# Licensed Materials - Property of IBM
+# 5737-E67
+# @ Copyright IBM Corporation 2016, 2018. All Rights Reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ template "prometheus.fullname" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    component: alertmanager
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  name: {{ template "prometheus.fullname" . }}-alertmanager
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ template "prometheus.fullname" . }}
+        component: alertmanager
+        release: {{ .Release.Name }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: beta.kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+      containers:
+        - name: configmap-reload
+          image: {{ .Values.configmapReload.image.name }}:{{ .Values.configmapReload.image.tag }}
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --volume-dir=/etc/config
+            - --webhook-url=http://localhost:9093/-/reload
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+              readOnly: true
+        - name: alertmanager
+          image: {{ .Values.alertmanager.image.name }}:{{ .Values.alertmanager.image.tag }}
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --config.file=/etc/config/alertmanager.yml
+            - --storage.path=/var/lib/alertmanager/data
+          ports:
+            - containerPort: 9093
+          resources:
+{{ toYaml .Values.alertmanager.resources | indent 12 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+            - name: storage-volume
+              mountPath: "/var/lib/alertmanager/data"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ template "prometheus.fullname" . }}-alertmanager
+        - name: storage-volume
+        {{- if .Values.alertmanager.persistentVolume.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ template "prometheus.fullname" . }}-alertmanager
+        {{- else }}
+          emptyDir: {}
+        {{- end }}

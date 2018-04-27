@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "kibana.fullname" . }}-config
+  labels:
+    app: {{ template "kibana.fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    component: "{{ .Values.kibana.name }}"
+    release: {{ .Release.Name }}
+    heritage: "{{ .Release.Service }}"
+data:
+  kibana.yml: |-
+    server.name: kibana
+    server.host: "0"
+    elasticsearch.url: "http://{{ .Values.elasticsearch.name }}:{{ .Values.elasticsearch.client.restPort }}"
+    xpack.monitoring.enabled: {{ .Values.xpack.monitoring }}
+    xpack.security.enabled: {{ .Values.xpack.security }}
+    xpack.graph.enabled: {{ .Values.xpack.graph }}
+    xpack.reporting.enabled: {{ .Values.xpack.reporting }}
+    xpack.ml.enabled: {{ .Values.xpack.ml }}

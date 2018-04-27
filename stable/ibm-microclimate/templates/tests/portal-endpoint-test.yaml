@@ -1,0 +1,28 @@
+#*******************************************************************************
+# Licensed Materials - Property of IBM
+# "Restricted Materials of IBM"
+#
+# Copyright IBM Corp. 2018 All Rights Reserved
+#
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#*******************************************************************************
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-portal-endpoint-test-{{ randAlphaNum 5 | lower }}"
+  labels:
+    app: {{ template "fullname" .}}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  restartPolicy: Never
+  containers:
+    - name: "{{ .Release.Name }}-portal-endpoint-test"
+      image: {{ .Values.portal.repository }}:{{ .Values.portal.tag }}
+      command: ["curl"]
+      args:  ['{{ template "fullname" .}}:{{ .Values.ports.portal }}']

@@ -1,0 +1,131 @@
+#*******************************************************************************
+# Licensed Materials - Property of IBM
+# "Restricted Materials of IBM"
+#
+# Copyright IBM Corp. 2017 All Rights Reserved
+#
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#*******************************************************************************
+
+theia:
+  repository: mycluster.icp:8500/default/ibmcom/microclimate-theia
+  tag: latest
+  resources:
+    requests:
+      memory: 350Mi
+      cpu: 30m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+
+filewatcher:
+  repository: mycluster.icp:8500/default/ibmcom/microclimate-file-watcher
+  tag: latest
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 2Gi
+      cpu: 300m
+
+portal:
+  repository: mycluster.icp:8500/default/ibmcom/microclimate-portal
+  tag: latest
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 2Gi
+      cpu: 500m
+
+jmeter:
+  repository: mycluster.icp:8500/default/ibmcom/microclimate-jmeter
+  tag: latest
+
+imagePullPolicy: Always
+
+persistence:
+  enabled: true
+  existingClaimName:
+  useDynamicProvisioning: true
+  size: 2Gi
+  storageClassName: ""
+
+ports:
+  portal: 9090
+  theia: 4191
+  filewatcher: 9091
+
+arch:
+  amd64: "3 - Most preferred"
+  ppc64le: "0 - Do not use"
+  s390x: "0 - Do not use"
+
+devops:
+  repository: mycluster.icp:8500/default/ibmcom/microclimate-devops
+  tag: latest
+  pullPolicy: Always
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+
+service:
+  name: devops
+  type: ClusterIP
+  externalPort: 9191
+  internalPort: 9191
+
+jenkins:
+  # pipeline section used to modify the default pipeline
+  Pipeline:
+    # Build step for all pipelines that are built by this Jenkins.
+    Build: true
+    # Deploy step for all pipelines built by this Jenkins.
+    Deploy: true
+    #  Setting this to true enables testing in the pipeline.
+    Test: true
+    #  Setting this to 'true' will prevent temporary namespaces from being deleted after tests are run against them.
+    Debug: false
+    # registry section points to a docker registry where images that are built via this pipeline are stored
+    Registry:
+      # The URL of the Docker registry for this pipeline e.g. mycluster.icp:8500/default.
+      Url: mycluster.icp:8500/default
+      # The name of the Kubernetes secret to be used for registry access.
+      Secret: microclimate-icp-secret
+    # TargetNamespace is the namespace that the pipeline will deploy to.
+    TargetNamespace: "microclimate-pipeline-deployments"
+    # template section defines the location of the Git repository from which the microserviceBuilderPipeline.groovy library is obtained
+    Template:
+      # repositoryUrl of the pipeline template
+      RepositoryUrl: "https://github.com/microclimate-dev2ops/jenkins-library.git"
+      # version is the branch or tag to be used when downloading the library
+      Version: "18.03"
+  Master:
+    ServiceType: ClusterIP
+    CustomConfigMap: true
+    HostName:
+    UseSecurity: true
+    AdminUser: admin
+    AdminPassword: admin
+    InstallPlugins:
+      - kubernetes:1.3.1
+      - workflow-aggregator:2.5
+      - workflow-job:2.17
+      - credentials-binding:1.15
+      - git:3.8.0
+    JavaOpts: "-Xms1024m -Xmx1024m"
+  Agent:
+    Memory: "600Mi"
+  Persistence:
+    ExistingClaim:
+
+gitlab:
+  url:
+  apiToken:

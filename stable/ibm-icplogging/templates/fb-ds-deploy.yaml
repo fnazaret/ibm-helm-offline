@@ -1,0 +1,84 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: {{ template "filebeat.fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    component: "{{ .Values.filebeat.name }}"
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+  name: {{ template "filebeat.fullname" . }}-amd64
+spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        name: {{ template "filebeat.fullname" . }}
+        arch: amd64
+    spec:
+      terminationGracePeriodSeconds: 30
+      {{- if .Values.filebeat.scope.nodes }}
+      nodeSelector:
+{{ toYaml .Values.filebeat.scope.nodes | indent 8 }}
+      {{- end }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: beta.kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: filebeat
+        image: {{ .Values.filebeat.image.repository }}:{{ .Values.filebeat.image.tag }}
+        env:
+        - name: NODE_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/filebeat/filebeat.yml
+          subPath: filebeat.yml
+        - name: data
+          mountPath: /usr/share/filebeat/data
+        - name: container-log
+          mountPath: /var/log/containers
+          readOnly: true
+        - name: pod-log
+          mountPath: /var/log/pods
+          readOnly: true
+        - name: docker-log
+          mountPath: /var/lib/docker/containers/
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ template "filebeat.fullname" . }}-config
+          items:
+          - key: filebeat.yml
+            path: filebeat.yml
+      - emptyDir:
+          medium: ""
+        name: data
+      - name: container-log
+        hostPath:
+          path: /var/log/containers
+      - name: pod-log
+        hostPath:
+          path: /var/log/pods
+      - name: docker-log
+        hostPath:
+          path: /var/lib/docker/containers
